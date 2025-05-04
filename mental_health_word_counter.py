@@ -74,10 +74,6 @@ with open("s24_2001_updated.vrt", "r", encoding="utf-8") as f:
                             counts[" ".join(phrase)] += 1
                             thread_has_hit = True
 
-# Write all matching threads to new file
-with open("s24_2001_matching_threads.vrt", "w", encoding="utf-8") as out:
-    out.writelines(matching_text_blocks)
-
 # Print sorted counts
 for term, count in counts.most_common():
     print(f"{term}: {count}")
