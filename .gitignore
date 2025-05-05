@@ -2,3 +2,4 @@
 *.vrt
 *.idea/
 *__pycache__/
+!keywords.txt
