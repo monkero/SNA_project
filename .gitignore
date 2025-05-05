@@ -1,3 +1,4 @@
 *.txt
 *.vrt
 *.idea/
+*__pycache__/
