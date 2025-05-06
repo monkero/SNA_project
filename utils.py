@@ -1,6 +1,7 @@
 from time import time
 import re
 from pathlib import Path
+from matplotlib import pyplot as plt
 
 KEYWORDS_FILE = "keywords.txt"
 REF_SIZE = 39260267748
@@ -18,7 +19,8 @@ def keywords_parser() -> dict[str, dict[str, set[int] | int]]:
     with open(KEYWORDS_FILE, "r", encoding="utf-8") as file:
         for line in file:
             keywords[line.strip()] = {'thread_ids': set(),
-                                      'total_count': 0}
+                                      'total_count': 0,
+                                      'title_count': 0}
     return keywords
 
 
@@ -38,6 +40,11 @@ def keyword_matching(input_file, keywords) -> dict[str, dict[str, set[int] | int
                 attributes = dict(re.findall(r'(\w+)="([^"]*)"', line))
                 thread_id = int(attributes.get('thread_id'))
                 thread_title = attributes.get('title')
+                tmp = thread_title.split()
+                for word in tmp:
+                    if word in keywords:
+                        keywords[word]['total_count'] += 1
+                        keywords[word]['title_count'] += 1
             elif thread_id:
                 fields = line.strip().split("\t")
                 if len(fields) >= 3:
@@ -51,3 +58,39 @@ def keyword_matching(input_file, keywords) -> dict[str, dict[str, set[int] | int
                         threads[thread_id] = thread_title
 
     return keywords, threads
+
+
+def print_results(keywords, threads):
+    print("RESULTS:")
+    for key in keywords.keys():
+        print(f"{key} : {keywords[key]['total_count']}")
+        print(f"\t title count : {keywords[key]['title_count']}")
+    print("\nTHREAD ID : Title")
+    for id_ in threads.keys():
+        print(f"{id_} : {threads[id_]}")
+
+
+def keywords_to_histograms(results):
+    keywords = list(results.keys())
+    total_counts = [results[key]['total_count'] for key in keywords]
+    title_counts = [results[key]['title_count'] for key in keywords]
+    sorted_total_keys, sorted_total_counts = zip(*sorted(zip(keywords, total_counts), key=lambda x: x[1], reverse=True))
+    sorted_title_keys, sorted_title_counts = zip(*sorted(zip(keywords, title_counts), key=lambda x: x[1], reverse=True))
+
+    plt.figure(figsize=(10, 6))
+    plt.bar(sorted_total_keys, sorted_total_counts, color='skyblue')
+    plt.xlabel('Keywords')
+    plt.ylabel('Count')
+    plt.title('Keyword Frequency (Total)')
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+    plt.show()
+
+    plt.figure(figsize=(10, 6))
+    plt.bar(sorted_title_keys, sorted_title_counts, color='coral')
+    plt.xlabel('Keywords')
+    plt.ylabel('Count')
+    plt.title('Keyword Frequency (Titles)')
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+    plt.show()
