@@ -70,7 +70,7 @@ def print_results(keywords, threads):
         print(f"{id_} : {threads[id_]}")
 
 
-def keywords_to_histograms(results):
+def keywords_to_histograms(results, year):
     keywords = list(results.keys())
     total_counts = [results[key]['total_count'] for key in keywords]
     title_counts = [results[key]['title_count'] for key in keywords]
@@ -81,7 +81,7 @@ def keywords_to_histograms(results):
     plt.bar(sorted_total_keys, sorted_total_counts, color='skyblue')
     plt.xlabel('Keywords')
     plt.ylabel('Count')
-    plt.title('Keyword Frequency (Total)')
+    plt.title('Keyword Frequency (Total) in ' + year)
     plt.xticks(rotation=45, ha='right')
     plt.tight_layout()
     plt.show()
@@ -90,7 +90,7 @@ def keywords_to_histograms(results):
     plt.bar(sorted_title_keys, sorted_title_counts, color='coral')
     plt.xlabel('Keywords')
     plt.ylabel('Count')
-    plt.title('Keyword Frequency (Titles)')
+    plt.title('Keyword Frequency (Titles) in ' + year)
     plt.xticks(rotation=45, ha='right')
     plt.tight_layout()
     plt.show()

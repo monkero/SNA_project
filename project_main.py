@@ -4,7 +4,8 @@ from utils import keywords_parser, keyword_matching, timed, print_results, keywo
 def main():
     # Args
     print_interim = False
-    input_file = "s24_2001.vrt"
+    year = "2001"
+    input_file = f"s24_{year}.vrt"
 
     keywords = keywords_parser()
     print(f"Parsing {input_file} please wait...")
@@ -13,7 +14,7 @@ def main():
     counts, threads = result
     if print_interim:
         print_results(counts, threads)
-    keywords_to_histograms(counts)
+    keywords_to_histograms(counts, year)
 
 
 if __name__ == "__main__":
