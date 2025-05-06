@@ -16,10 +16,11 @@ def main():
     if print_interim:
         print_results(counts, threads)
     keywords_to_histograms(counts, year)
-    G = build_thread_network(counts, threads, year)
+    G, network_metrics = build_thread_network(counts, threads, year)
     if show_graph:
         show_network_graph(G)
-    print("Done.\n")
+    analyze_network(G, network_metrics, year)
+    print("\nDone.")
 
 
 if __name__ == "__main__":

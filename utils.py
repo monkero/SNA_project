@@ -1,3 +1,4 @@
+import json
 from itertools import combinations
 from time import time
 import re
@@ -6,6 +7,7 @@ import os
 import networkx as nx
 from matplotlib import pyplot as plt
 
+METRICS_FILE = "network_metrics.json"
 KEYWORDS_FILE = "keywords.txt"
 REF_SIZE = 39260267748
 REF_LINES = 514000000
@@ -63,11 +65,54 @@ def keyword_matching(input_file, keywords) -> dict[str, dict[str, set[int] | int
     return keywords, threads
 
 
+def analyze_network(G, network_metrics, year):
+    print("\nNETWORK ANALYSIS:")
+    avg_deg = sum(G.degree(node) for node in G.nodes) / len(G.nodes)
+    network_metrics['average degree'] = avg_deg
+    print(f"Average degree: {avg_deg:.2f}")
+
+    max_deg = max(G.degree(), key=lambda x: x[1])[1]
+    network_metrics['maximum degree'] = max_deg
+    print(f"Maximum degree: {max_deg}")
+
+    global_cc = nx.transitivity(G)
+    network_metrics['global clustering coefficient'] = global_cc
+    print(f"Global clustering coefficient: {global_cc:.2f}")
+
+    largest_comp = len(max(nx.connected_components(G), key=len))
+    network_metrics['largest component size'] = largest_comp
+    print(f"Largest component size: {largest_comp}")
+
+    communities = 0
+    for _ in nx.connected_components(G):
+        communities += 1
+    network_metrics['number communities'] = communities
+    print(f"Number communities: {communities}")
+    save_network_metrics(network_metrics, year)
+
+
+def save_network_metrics(metrics, year):
+    current_path = os.path.dirname(os.path.realpath(__file__))
+    metrics_path = str(os.path.join(current_path, "results\\" + METRICS_FILE))
+    if os.path.exists(metrics_path):
+        with open(metrics_path, "r", encoding="utf-8") as rfile:
+            data = json.load(rfile)
+    else:
+        data = {}
+    if year not in data:
+        data[year] = metrics
+        with open(metrics_path, "w", encoding="utf-8") as wfile:
+            json.dump(data, wfile, indent=2)
+
+
 def build_thread_network(keywords, threads, year):
+    print("Creating graph...")
     G = nx.Graph()
+    network_metrics = {}
     for thread_id, thread_title in threads.items():
         G.add_node(thread_id, label=thread_title)
     print(f"Added {G.number_of_nodes()} nodes")
+    network_metrics['nodes'] = G.number_of_nodes()
     for keyword, data in keywords.items():
         thread_ids = data['thread_ids']
         for t1, t2 in combinations(thread_ids, 2):
@@ -76,13 +121,14 @@ def build_thread_network(keywords, threads, year):
             else:
                 G.add_edge(t1, t2)
     print(f"Added {G.number_of_edges()} edges")
+    network_metrics['edges'] = G.number_of_edges()
     current_path = os.path.dirname(os.path.realpath(__file__))
     dir_path = str(os.path.join(current_path, "results\\" + year))
     os.makedirs(dir_path, exist_ok=True)
     graph_path = str(os.path.join(dir_path, f"{year}_keywords_network.gexf"))
     if not os.path.exists(graph_path):
         nx.write_gexf(G, graph_path)
-    return G
+    return G, network_metrics
 
 
 def show_network_graph(G):
