@@ -2,6 +2,7 @@ from itertools import combinations
 from time import time
 import re
 from pathlib import Path
+import os
 
 import networkx as nx
 from matplotlib import pyplot as plt
@@ -62,6 +63,7 @@ def keyword_matching(input_file, keywords) -> dict[str, dict[str, set[int] | int
 
     return keywords, threads
 
+
 def build_thread_network(keywords, threads):
     G = nx.Graph()
     for thread_id, thread_title in threads.items():
@@ -78,11 +80,13 @@ def build_thread_network(keywords, threads):
     print(f"Added {G.number_of_edges()} edges")
     return G
 
+
 def show_network_graph(G):
     plt.figure(figsize=(15, 10))
     pos = nx.kamada_kawai_layout(G)
     nx.draw(G, pos, with_labels=False, node_size=100, alpha=0.5)
     plt.show()
+
 
 def print_results(keywords, threads):
     print("RESULTS:")
@@ -95,6 +99,13 @@ def print_results(keywords, threads):
 
 
 def keywords_to_histograms(results, year):
+    # Create directory for save data
+    current_path = os.path.dirname(os.path.realpath(__file__))
+    file_path = str(os.path.join(current_path, "results\\" + year))
+    os.makedirs(file_path, exist_ok=True)
+    fig_path = os.path.join(file_path, f"{year}_total_frequency.png")
+
+    # Sort keywords and their counts
     keywords = list(results.keys())
     total_counts = [results[key]['total_count'] for key in keywords]
     title_counts = [results[key]['title_count'] for key in keywords]
@@ -108,7 +119,12 @@ def keywords_to_histograms(results, year):
     plt.title('Keyword Frequency (Total) in ' + year)
     plt.xticks(rotation=45, ha='right')
     plt.tight_layout()
+
+    # Save total figure
+    if not os.path.exists(fig_path):
+        plt.savefig(fig_path)
     plt.show()
+    plt.close()
 
     plt.figure(figsize=(10, 6))
     plt.bar(sorted_title_keys, sorted_title_counts, color='coral')
@@ -117,4 +133,10 @@ def keywords_to_histograms(results, year):
     plt.title('Keyword Frequency (Titles) in ' + year)
     plt.xticks(rotation=45, ha='right')
     plt.tight_layout()
+
+    # Save title figure
+    fig_path = os.path.join(file_path, f"{year}_title_frequency.png")
+    if not os.path.exists(fig_path):
+        plt.savefig(fig_path)
     plt.show()
+    plt.close()
