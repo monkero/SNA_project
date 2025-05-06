@@ -1,6 +1,9 @@
+from itertools import combinations
 from time import time
 import re
 from pathlib import Path
+
+import networkx as nx
 from matplotlib import pyplot as plt
 
 KEYWORDS_FILE = "keywords.txt"
@@ -59,6 +62,27 @@ def keyword_matching(input_file, keywords) -> dict[str, dict[str, set[int] | int
 
     return keywords, threads
 
+def build_thread_network(keywords, threads):
+    G = nx.Graph()
+    for thread_id, thread_title in threads.items():
+        G.add_node(thread_id)
+    print(f"Added {G.number_of_nodes()} nodes")
+    for keyword, data in keywords.items():
+        thread_ids = data['thread_ids']
+        for t1, t2 in combinations(thread_ids, 2):
+            if t1 in threads and t2 in threads:
+                if G.has_edge(t1, t2):
+                    continue
+                else:
+                    G.add_edge(t1, t2)
+    print(f"Added {G.number_of_edges()} edges")
+    return G
+
+def show_network_graph(G):
+    plt.figure(figsize=(15, 10))
+    pos = nx.kamada_kawai_layout(G)
+    nx.draw(G, pos, with_labels=False, node_size=100, alpha=0.5)
+    plt.show()
 
 def print_results(keywords, threads):
     print("RESULTS:")

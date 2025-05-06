@@ -1,9 +1,11 @@
-from utils import keywords_parser, keyword_matching, timed, print_results, keywords_to_histograms
+from utils import keywords_parser, keyword_matching, timed, print_results, keywords_to_histograms, build_thread_network, show_network_graph
+
 
 
 def main():
     # Args
     print_interim = False
+    show_graph = True
     year = "2001"
     input_file = f"s24_{year}.vrt"
 
@@ -15,6 +17,10 @@ def main():
     if print_interim:
         print_results(counts, threads)
     keywords_to_histograms(counts, year)
+    G = build_thread_network(counts, threads)
+    if show_graph:
+        show_network_graph(G)
+    print("Done.\n")
 
 
 if __name__ == "__main__":
