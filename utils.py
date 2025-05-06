@@ -3,7 +3,6 @@ from time import time
 import re
 from pathlib import Path
 import os
-
 import networkx as nx
 from matplotlib import pyplot as plt
 
@@ -64,27 +63,32 @@ def keyword_matching(input_file, keywords) -> dict[str, dict[str, set[int] | int
     return keywords, threads
 
 
-def build_thread_network(keywords, threads):
+def build_thread_network(keywords, threads, year):
     G = nx.Graph()
     for thread_id, thread_title in threads.items():
-        G.add_node(thread_id)
+        G.add_node(thread_id, label=thread_title)
     print(f"Added {G.number_of_nodes()} nodes")
     for keyword, data in keywords.items():
         thread_ids = data['thread_ids']
         for t1, t2 in combinations(thread_ids, 2):
-            if t1 in threads and t2 in threads:
-                if G.has_edge(t1, t2):
-                    continue
-                else:
-                    G.add_edge(t1, t2)
+            if G.has_edge(t1, t2):
+                continue
+            else:
+                G.add_edge(t1, t2)
     print(f"Added {G.number_of_edges()} edges")
+    current_path = os.path.dirname(os.path.realpath(__file__))
+    dir_path = str(os.path.join(current_path, "results\\" + year))
+    os.makedirs(dir_path, exist_ok=True)
+    graph_path = str(os.path.join(dir_path, f"{year}_keywords_network.gexf"))
+    if not os.path.exists(graph_path):
+        nx.write_gexf(G, graph_path)
     return G
 
 
 def show_network_graph(G):
     plt.figure(figsize=(15, 10))
     pos = nx.kamada_kawai_layout(G)
-    nx.draw(G, pos, with_labels=False, node_size=100, alpha=0.5)
+    nx.draw_networkx(G, pos, with_labels=False, node_size=100, alpha=0.5)
     plt.show()
 
 
