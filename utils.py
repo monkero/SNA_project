@@ -72,6 +72,22 @@ def keyword_matching(input_file, keywords) -> dict[str, dict[str, set[int] | int
     return keywords, threads
 
 
+def plot_degree_distribution(G, year):
+    current_path = os.path.dirname(os.path.realpath(__file__))
+    file_path = str(os.path.join(current_path, "results\\" + year))
+    degrees = [d for _, d in G.degree()]
+
+    plt.figure(figsize=(10, 6))
+    plt.hist(degrees, bins=50, color='yellowgreen', edgecolor='black')
+    plt.title('Degree Distribution')
+    plt.xlabel('Degree')
+    plt.ylabel('Frequency')
+    fig_path = os.path.join(file_path, f"{year}_degrees_distribution.png")
+    if not os.path.exists(fig_path):
+        plt.savefig(fig_path)
+    plt.show()
+
+
 def powerlaw_fit():
     return
 
