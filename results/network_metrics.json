@@ -5,7 +5,10 @@
     "average degree": 65.13089005235602,
     "maximum degree": 130,
     "global clustering coefficient": 0.983902293456389,
-    "largest component size": 178,
-    "number communities": 6
+    "diameter": "inf",
+    "LCC diameter": 4,
+    "giant community size": 101,
+    "number communities": 9,
+    "modularity": 0.17444480774599108
   }
 }

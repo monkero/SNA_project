@@ -5,8 +5,9 @@ import re
 from pathlib import Path
 import os
 import networkx as nx
+import networkx.exception
 from matplotlib import pyplot as plt
-
+import community as cl
 METRICS_FILE = "network_metrics.json"
 KEYWORDS_FILE = "keywords.txt"
 REF_SIZE = 39260267748
@@ -69,7 +70,7 @@ def analyze_network(G, network_metrics, year):
     print("\nNETWORK ANALYSIS:")
     avg_deg = sum(G.degree(node) for node in G.nodes) / len(G.nodes)
     network_metrics['average degree'] = avg_deg
-    print(f"Average degree: {avg_deg:.2f}")
+    print(f"Average degree: {avg_deg:.3f}")
 
     max_deg = max(G.degree(), key=lambda x: x[1])[1]
     network_metrics['maximum degree'] = max_deg
@@ -77,17 +78,36 @@ def analyze_network(G, network_metrics, year):
 
     global_cc = nx.transitivity(G)
     network_metrics['global clustering coefficient'] = global_cc
-    print(f"Global clustering coefficient: {global_cc:.2f}")
+    print(f"Global clustering coefficient: {global_cc:.3f}")
 
-    largest_comp = len(max(nx.connected_components(G), key=len))
-    network_metrics['largest component size'] = largest_comp
-    print(f"Largest component size: {largest_comp}")
+    try:
+        diameter = nx.diameter(G)
+    except networkx.exception.NetworkXError:
+        diameter = "inf"
+    network_metrics['diameter'] = diameter
+    print(f"Diameter of the graph: {diameter}")
 
-    communities = 0
-    for _ in nx.connected_components(G):
-        communities += 1
-    network_metrics['number communities'] = communities
-    print(f"Number communities: {communities}")
+    lcc = max(nx.connected_components(G), key=len)
+    lcc_graph = G.subgraph(lcc).copy()
+    lcc_diameter = nx.diameter(lcc_graph)
+    network_metrics['LCC diameter'] = lcc_diameter
+
+    partition = cl.community_louvain.best_partition(G)
+    communities = {}
+    for node, id_ in partition.items():
+        communities.setdefault(id_, []).append(node)
+    modularity = cl.modularity(partition, G)
+    communities = list(communities.values())
+    communities_sizes = [len(c) for c in communities]
+    giant_comm = max(communities_sizes)
+    network_metrics['giant community size'] = giant_comm
+    print(f"Giant community size: {giant_comm}")
+
+    network_metrics['number communities'] = len(communities_sizes)
+    print(f"Number communities: {len(communities_sizes)}")
+
+    network_metrics['modularity'] = modularity
+    print(f"Modularity (quality): {modularity:.3f}")
     save_network_metrics(network_metrics, year)
 
 
