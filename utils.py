@@ -9,6 +9,7 @@ import networkx.exception
 from matplotlib import pyplot as plt
 import community as cl
 from collections import defaultdict, Counter
+import powerlaw
 
 METRICS_FILE = "network_metrics.json"
 KEYWORDS_FILE = "keywords.txt"
@@ -86,13 +87,28 @@ def plot_degree_distribution(G, year):
     if not os.path.exists(fig_path):
         plt.savefig(fig_path)
     plt.show()
+    return degrees
 
 
-def powerlaw_fit():
-    return
+def powerlaw_fit(network_metrics, degrees, year):
+    fit = powerlaw.Fit(degrees, discrete=True)
+    print("\nPower-law fit results for the degree distribution:")
+    R_exp, P_exp = fit.distribution_compare('power_law', 'lognormal')
+    print(f"  Estimated xmin: {fit.xmin}")
+    print(f"  (R): {R_exp:.2f}")
+    print(f"  (P): {P_exp:.4f}")
+    print("  Positive R with low P (< 0.05) -> the degree distribution most likely follows power-law ")
+    network_metrics['follows powerlaw'] = True if (R_exp > 0 and P_exp < 0.05) else False
+    ax = fit.plot_ccdf(label='Empirical')
+    fit.power_law.plot_ccdf(ax=ax, linestyle='--', label='Power law')
+    fit.lognormal.plot_ccdf(ax=ax, linestyle=':', label='Lognormal')
+    plt.legend()
+    plt.title(f"Degree CCDF (year {year})")
+    plt.show()
+    save_network_metrics(network_metrics, year)
 
 
-def analyze_network(G, network_metrics, year):
+def analyze_network(G, network_metrics):
     print("\nNETWORK ANALYSIS:")
     avg_deg = sum(G.degree(node) for node in G.nodes) / len(G.nodes)
     network_metrics['average degree'] = avg_deg
@@ -134,7 +150,7 @@ def analyze_network(G, network_metrics, year):
 
     network_metrics['modularity'] = modularity
     print(f"Modularity (quality): {modularity:.3f}")
-    save_network_metrics(network_metrics, year)
+    return network_metrics
 
 
 def save_network_metrics(metrics, year):

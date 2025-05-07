@@ -19,9 +19,9 @@ def main():
     G, network_metrics = build_thread_network(counts, threads, year)
     if show_graph:
         show_network_graph(G)
-    analyze_network(G, network_metrics, year)
-    plot_degree_distribution(G, year)
-    powerlaw_fit()
+    network_metrics = analyze_network(G, network_metrics)
+    degrees = plot_degree_distribution(G, year)
+    powerlaw_fit(network_metrics, degrees, year)
     print("\nDone.")
 
 

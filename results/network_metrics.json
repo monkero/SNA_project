@@ -9,6 +9,7 @@
     "LCC diameter": 4,
     "giant community size": 101,
     "number communities": 9,
-    "modularity": 0.17444480774599108
+    "modularity": 0.17530390767004067,
+    "follows powerlaw": false
   }
 }
