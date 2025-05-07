@@ -8,6 +8,8 @@ import networkx as nx
 import networkx.exception
 from matplotlib import pyplot as plt
 import community as cl
+from collections import defaultdict, Counter
+
 METRICS_FILE = "network_metrics.json"
 KEYWORDS_FILE = "keywords.txt"
 REF_SIZE = 39260267748
@@ -61,9 +63,17 @@ def keyword_matching(input_file, keywords) -> dict[str, dict[str, set[int] | int
                     if word in keywords or lemma in keywords:
                         keywords[word if word in keywords else lemma]['total_count'] += 1
                         keywords[word if word in keywords else lemma]['thread_ids'].add(thread_id)
-                        threads[thread_id] = thread_title
+                        if thread_id not in threads:
+                            threads[thread_id] = {'title': thread_title,
+                                                  'hits': 1}
+                        else:
+                            threads[thread_id]['hits'] += 1
 
     return keywords, threads
+
+
+def powerlaw_fit():
+    return
 
 
 def analyze_network(G, network_metrics, year):
@@ -129,17 +139,39 @@ def build_thread_network(keywords, threads, year):
     print("Creating graph...")
     G = nx.Graph()
     network_metrics = {}
-    for thread_id, thread_title in threads.items():
-        G.add_node(thread_id, label=thread_title)
+    for thread in threads.keys():
+        G.add_node(thread, label=threads[thread]['title'])
     print(f"Added {G.number_of_nodes()} nodes")
     network_metrics['nodes'] = G.number_of_nodes()
     for keyword, data in keywords.items():
         thread_ids = data['thread_ids']
         for t1, t2 in combinations(thread_ids, 2):
             if G.has_edge(t1, t2):
-                continue
+                G[t1][t2]['weight'] += 1
             else:
-                G.add_edge(t1, t2)
+                G.add_edge(t1, t2, weight=1)
+
+    for node in G.nodes():
+        node_keywords = [kw for kw, info in keywords.items() if node in info['thread_ids']]
+        G.nodes[node]['keywords'] = ";".join(node_keywords)
+
+    partition = cl.community_louvain.best_partition(G, weight='weight')
+    communities = defaultdict(list)
+    for node, cid in partition.items():
+        communities[cid].append(node)
+
+    community_label = {}
+    for cid, nodes in communities.items():
+        all_kw = []
+        for n in nodes:
+            kw_list = G.nodes[n]['keywords'].split(';')
+            all_kw.extend(kw_list)
+        most_common, _ = Counter(all_kw).most_common(1)[0]
+        community_label[cid] = most_common
+
+    for node, cid in partition.items():
+        G.nodes[node]['community_label'] = community_label[cid]
+
     print(f"Added {G.number_of_edges()} edges")
     network_metrics['edges'] = G.number_of_edges()
     current_path = os.path.dirname(os.path.realpath(__file__))

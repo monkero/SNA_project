@@ -20,6 +20,7 @@ def main():
     if show_graph:
         show_network_graph(G)
     analyze_network(G, network_metrics, year)
+    powerlaw_fit()
     print("\nDone.")
 
 
