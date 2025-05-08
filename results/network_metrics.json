@@ -2,14 +2,27 @@
   "2001": {
     "nodes": 191,
     "edges": 6220,
-    "average degree": 65.13089005235602,
     "maximum degree": 130,
+    "average degree": 65.13089005235602,
     "global clustering coefficient": 0.983902293456389,
     "diameter": "inf",
     "LCC diameter": 4,
-    "giant community size": 101,
+    "average path length": 1.772741699993652,
+    "community sizes": [
+      101,
+      39,
+      36,
+      5,
+      4,
+      2,
+      2,
+      1,
+      1
+    ],
     "number communities": 9,
     "modularity": 0.17530390767004067,
+    "LCC size": 178,
+    "average degree centrality": 0.3427941581702951,
     "follows powerlaw": false
   }
 }
