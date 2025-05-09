@@ -163,6 +163,10 @@ def analyze_network(G, network_metrics):
     print(f"Global clustering coefficient: {global_cc:.3f}")
 
     diameter = IG.diameter(unconn=False)
+    try:
+        int(diameter)
+    except OverflowError:
+        diameter = "inf"
     print(f"Diameter of the graph: {diameter}")
     components = IG.connected_components()
     lcc = components.giant()
