@@ -24,5 +24,26 @@
     "LCC size": 178,
     "average degree centrality": 0.3427941581702951,
     "follows powerlaw": false
+  },
+  "2006": {
+    "nodes": 9091,
+    "edges": 14645481,
+    "maximum degree": 7854,
+    "average degree": 3221.9736002639975,
+    "global clustering coefficient": 0.963617077881408,
+    "diameter": 3,
+    "LCC diameter": 3,
+    "average path length": 1.6515736503618355,
+    "community sizes": [
+      4621,
+      2708,
+      1353,
+      409
+    ],
+    "number communities": 4,
+    "modularity": 0.16582080233375512,
+    "LCC size": 9091,
+    "average degree centrality": 0.35445254128314957,
+    "follows powerlaw": false
   }
 }

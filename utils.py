@@ -5,11 +5,12 @@ import re
 from pathlib import Path
 import os
 import networkx as nx
-import networkx.exception
+import numpy as np
 from matplotlib import pyplot as plt
 import community as cl
 from collections import defaultdict, Counter
 import powerlaw
+import igraph as ig
 
 METRICS_FILE = "network_metrics.json"
 KEYWORDS_FILE = "keywords.txt"
@@ -100,6 +101,20 @@ def plot_degree_distribution(G, year):
     return degrees
 
 
+def convert_to_igraph(graph):
+    edges = list(graph.edges())
+    ig_graph = ig.Graph.TupleList(edges, directed=False)
+    networkx_nodes = set(graph.nodes())
+    try:
+        ig_nodes = set(ig_graph.vs["name"])
+    except KeyError:
+        ig_nodes = set()
+    missing_nodes = networkx_nodes - ig_nodes
+    for node in missing_nodes:
+        ig_graph.add_vertex(name=str(node))
+    return ig_graph
+
+
 def powerlaw_fit(network_metrics, degrees, year):
     fit = powerlaw.Fit(degrees, discrete=True)
     print("\nPower-law fit results for the degree distribution:")
@@ -139,68 +154,52 @@ def analyze_network(G, network_metrics):
     }
     """
     print("\nNETWORK ANALYSIS:")
-    max_deg = max(G.degree(), key=lambda x: x[1])[1]
-    network_metrics['maximum degree'] = max_deg
+    IG: ig.Graph = convert_to_igraph(G)
+    max_deg = max(IG.degree())
     print(f"Maximum degree: {max_deg}")
-
-    avg_deg = sum(G.degree(node) for node in G.nodes) / len(G.nodes)
-    network_metrics['average degree'] = avg_deg
+    avg_deg = sum(IG.degree()) / float(len(IG.degree()))
     print(f"Average degree: {avg_deg:.3f}")
-
-    global_cc = nx.transitivity(G)
-    network_metrics['global clustering coefficient'] = global_cc
+    global_cc = IG.transitivity_undirected()
     print(f"Global clustering coefficient: {global_cc:.3f}")
 
-    try:
-        diameter = nx.diameter(G)
-    except networkx.exception.NetworkXError:
-        diameter = "inf"
-    network_metrics['diameter'] = diameter
+    diameter = IG.diameter(unconn=False)
     print(f"Diameter of the graph: {diameter}")
-
-    lcc = max(nx.connected_components(G), key=len)
-    lcc_graph = G.subgraph(lcc).copy()
-    lcc_diameter = nx.diameter(lcc_graph)
-    lcc_size = len(lcc)
-    network_metrics['LCC diameter'] = lcc_diameter
+    components = IG.connected_components()
+    lcc = components.giant()
+    lcc_size = len(lcc.vs)
+    print(f"Largest connected component size: {lcc_size}")
+    if lcc_size == G.number_of_nodes():
+        lcc_diameter = diameter
+    else:
+        lcc_diameter = lcc.diameter()
     print(f"Largest connected component diameter: {lcc_diameter}")
 
-    if nx.is_connected(G) and len(G.nodes) > 1:
-        avg_path_length = nx.average_shortest_path_length(G)
-    else:
-        if lcc_size > 1:
-            avg_path_length = nx.average_shortest_path_length(lcc_graph)
-        else:
-            avg_path_length = 0
+    avg_path_length = np.mean(lcc.distances())
+    print(f"Average path length: {avg_path_length:.3f}")
 
-    network_metrics['average path length'] = avg_path_length
-    print(f"Average path length: {avg_path_length}")
-
-    partition = cl.community_louvain.best_partition(G)
-    communities = {}
-    for node, id_ in partition.items():
-        communities.setdefault(id_, []).append(node)
-    modularity = cl.modularity(partition, G)
-    communities = list(communities.values())
-    communities_sizes = sorted([len(c) for c in communities], reverse=True)
-
-    network_metrics['community sizes'] = communities_sizes
+    community = IG.community_multilevel()  # multilevel = Louvain
+    communities_sizes = sorted(community.sizes(), reverse=True)
     print(f"Community sizes: {communities_sizes}")
-
-    network_metrics['number communities'] = len(communities_sizes)
-    print(f"Number communities: {len(communities_sizes)}")
-
-    network_metrics['modularity'] = modularity
+    num_communities = len(communities_sizes)
+    print(f"Number communities: {num_communities }")
+    modularity = community.modularity
     print(f"Modularity (quality): {modularity:.3f}")
-
-    network_metrics['LCC size'] = lcc_size
-    print(f"Largest connected component size: {lcc_size}")
-
-    deg_cent = nx.degree_centrality(G)
-    avg_deg_cent = sum(deg_cent.values()) / len(deg_cent)
-    network_metrics['average degree centrality'] = avg_deg_cent
+    n = len(IG.vs)
+    deg_cent = [d / (n - 1) for d in IG.degree()]
+    avg_deg_cent = sum(deg_cent) / n
     print(f"Average degree centrality: {avg_deg_cent:.3f}")
 
+    network_metrics['maximum degree'] = max_deg
+    network_metrics['average degree'] = avg_deg
+    network_metrics['global clustering coefficient'] = global_cc
+    network_metrics['diameter'] = diameter
+    network_metrics['LCC diameter'] = lcc_diameter
+    network_metrics['average path length'] = avg_path_length
+    network_metrics['community sizes'] = communities_sizes
+    network_metrics['number communities'] = num_communities
+    network_metrics['modularity'] = modularity
+    network_metrics['LCC size'] = lcc_size
+    network_metrics['average degree centrality'] = avg_deg_cent
     return network_metrics
 
 
@@ -400,40 +399,28 @@ def display_metrics(metrics, year):
 
 
 def calculate_metrics(metrics, G):
-    max_deg = max(G.degree(), key=lambda x: x[1])[1]
-    avg_deg = sum(G.degree(node) for node in G.nodes) / len(G.nodes)
-    gcc = nx.transitivity(G)
+    IG = convert_to_igraph(G)
 
-    components = list(nx.connected_components(G))
-    giant_comp = max(components, key=len)
-    giant_size = len(giant_comp)
+    max_deg = max(IG.degree())
+    avg_deg = sum(IG.degree()) / float(len(IG.degree()))
+    gcc = IG.transitivity_undirected()
 
-    if nx.is_connected(G) and len(G.nodes) > 1:
-        avg_path_length = nx.average_shortest_path_length(G)
-        diameter = nx.diameter(G)
-    else:
-        # Compute for the giant component if exists
-        if giant_size > 1:
-            sub = G.subgraph(giant_comp)
-            avg_path_length = nx.average_shortest_path_length(sub)
-            diameter = nx.diameter(sub)
-        else:
-            avg_path_length = 0
-            diameter = 0
+    diameter = IG.diameter()
 
-    deg_cent = nx.degree_centrality(G)
-    avg_deg_cent = sum(deg_cent.values()) / len(deg_cent)
+    components = IG.clusters()
+    lcc = components.giant()
+    giant_size = len(lcc.vs)
 
-    partition = cl.community_louvain.best_partition(G)
-    communities = {}
-    for node, id_ in partition.items():
-        communities.setdefault(id_, []).append(node)
-    try:
-        modularity = cl.modularity(partition, G)
-    except ValueError:
-        modularity = 0
-    communities = list(communities.values())
-    communities_sizes = [len(c) for c in communities]
+    avg_path_length = np.mean(lcc.distances())
+
+    community = IG.community_multilevel()  # multilevel = Louvain
+    communities_sizes = sorted(community.sizes(), reverse=True)
+    num_communities = len(communities_sizes)
+    modularity = community.modularity
+
+    n = len(IG.vs)
+    deg_cent = [d / (n - 1) for d in IG.degree()]
+    avg_deg_cent = sum(deg_cent) / n
 
     metrics['maximum degree'].append(max_deg)
     metrics['average degree'].append(avg_deg)
@@ -441,7 +428,7 @@ def calculate_metrics(metrics, G):
     metrics['LCC diameter'].append(diameter)
     metrics['average path length'].append(avg_path_length)
     metrics['community sizes'].append(communities_sizes)
-    metrics['number communities'].append(len(communities_sizes))
+    metrics['number communities'].append(num_communities)
     metrics['modularity'].append(modularity)
     metrics['LCC size'].append(giant_size)
     metrics['average degree centrality'].append(avg_deg_cent)
@@ -477,4 +464,3 @@ def analyze_reciprocity(threads, year):
     if not os.path.exists(fig_path):
         plt.savefig(fig_path)
     plt.show()
-
