@@ -40,15 +40,22 @@ def keyword_matching(input_file, keywords):
     thread_id = None
     thread_title = None
     threads = {}
+    reserve_id = 0
 
     with open(input_file, "r", encoding="utf-8") as file:
         for line_num, line in enumerate(file):
             if line_num > 1 and line_num % 10_000_000 == 0:
-                print(f"{(line_num / est_lines) * 100:.1f}%")
+                if line_num < est_lines:
+                    print(f"{(line_num / est_lines) * 100:.1f}%")
             if line.startswith("<text "):
                 # Start of a new sentence block
                 attributes = dict(re.findall(r'(\w+)="([^"]*)"', line))
-                thread_id = int(attributes.get('thread_id'))
+                try:
+                    thread_id = int(attributes.get('thread_id'))
+                except ValueError:
+                    while reserve_id in threads:
+                        reserve_id += 1
+                    thread_id = reserve_id
                 thread_title = attributes.get('title')
                 tmp = thread_title.split()
                 for word in tmp:
@@ -367,8 +374,9 @@ def analyze_network_with_threshold(keywords, threads, year):
 def display_metrics(metrics, year):
     current_path = os.path.dirname(os.path.realpath(__file__))
     file_path = str(os.path.join(current_path, "results\\" + year))
+
     plt.figure(figsize=(12, 8))
-    for key in ['nodes', 'edges', 'maximum degree',
+    for key in ['maximum degree', 'nodes',
                 'LCC size', 'number communities']:
         plt.plot(metrics['k'], metrics[key], marker='o', label=key)
 
@@ -386,7 +394,7 @@ def display_metrics(metrics, year):
 
     plt.figure(figsize=(12, 8))
     for key in ['average degree centrality', 'modularity', 'average path length', 'LCC diameter',
-                'average degree', 'global clustering coefficient']:
+                'global clustering coefficient']:
         plt.plot(metrics['k'], metrics[key], marker='s', label=key)
 
     plt.xlabel('Threshold k')
@@ -400,6 +408,24 @@ def display_metrics(metrics, year):
         plt.savefig(fig_path)
     plt.show()
     plt.close()
+
+    fig, axs = plt.subplots(2, 1, figsize=(10, 8))
+    axs[0].plot(metrics['k'], metrics['edges'], marker='o', color='tab:blue')
+    axs[0].set_title('Edges vs Threshold k')
+    axs[0].set_xlabel('Threshold k')
+    axs[0].set_ylabel('Number of Edges')
+    axs[0].grid(True)
+
+    axs[1].plot(metrics['k'], metrics['average degree'], marker='s', color='tab:green')
+    axs[1].set_title('Average Degree vs Threshold k')
+    axs[1].set_xlabel('Threshold k')
+    axs[1].set_ylabel('Average Degree')
+    axs[1].grid(True)
+    plt.tight_layout()
+    fig_path = os.path.join(file_path, f"{year}_threshold_k_figure_(3).png")
+    if not os.path.exists(fig_path):
+        plt.savefig(fig_path)
+    plt.show()
 
 
 def calculate_metrics(metrics, G):
